@@ -39,6 +39,7 @@ from kararadar.scoring import rules
 from kararadar.reports import templates, html_gen
 from kararadar.ai import ollama_sum
 from kararadar.detection.brandmatch import load_brands
+from kararadar import db, notify, i18n
 
 BANNER = None
 
@@ -234,8 +235,9 @@ def list_brands():
         print(b.get("name"), "-", b.get("official_domains"))
 
 
-def interactive_menu(lang="az"):
-    _banner()
+def interactive_menu(lang="az", show_banner=True):
+    if show_banner:
+        _banner()
     while True:
         print(colors.header("╔════════════════════════════════════════════════════════════════════════════╗"))
         print(colors.header("║ 🛰  KaraRadar — Interactive Menu                                           ║"))
@@ -244,7 +246,10 @@ def interactive_menu(lang="az"):
         print(colors.info("║ 2 │ 🌐 Analyze my own domains (domain1,domain2 or .txt)                  ║"))
         print(colors.warn("║ 3 │ 🏷  Manage brands (add / remove / list — persists to brands.yaml)      ║"))
         print(colors.header("║ 4 │ ⚙️  Settings (language AZ/EN, report format)                           ║"))
-        print(colors.danger("║ 5 │ 🚪 Exit                                                                ║"))
+        print(colors.scanning("║ 5 │ 👀 Watch mode (live CT stream with alerts)                            ║"))
+        print(colors.info("║ 6 │ 📜 History & reports (browse past scans, diff)                        ║"))
+        print(colors.ok("║ 7 │ 🛡  Whitelist management (official domains)                           ║"))
+        print(colors.danger("║ 8 │ 🚪 Exit                                                              ║"))
         print(colors.header("╚════════════════════════════════════════════════════════════════════════════╝"))
         choice = input(colors.scanning("> ")).strip()
         if choice == "1":
@@ -278,6 +283,29 @@ def interactive_menu(lang="az"):
             fmt = input("Default report format (txt/json/csv/html/md): ").strip()
             print(colors.ok(f"Language={lang}"))
         elif choice == "5":
+            thr = input("Alert threshold score (default 40): ").strip()
+            thr = int(thr) if thr else 40
+            dur = input("Watch seconds (blank=30): ").strip()
+            dur = int(dur) if dur else 30
+            for _ in range(max(1, dur // 10)):
+                res = monitor_brands(since=1, lang=lang, limit=20)
+                for r in (res or []):
+                    if (r.get("score") or 0) >= thr:
+                        notify.alert(r.get("domain"), r.get("score"), r.get("verdict"), thr)
+                import time as _t; _t.sleep(2)
+        elif choice == "6":
+            runs = db.history(10)
+            for r in runs:
+                print(f"Run {r['id']} {r['ts']:.0f} {r['lang']} -> {len(r['domains'])} domains")
+            if len(runs) >= 2:
+                diff = db.diff_runs(runs[1]["id"], runs[0]["id"])
+                print("Diff new:", diff["new"])
+                print("Diff gone:", diff["gone"])
+                print("Diff changed:", diff["changed"])
+        elif choice == "7":
+            for b in load_brands():
+                print(b.get("name"), "->", b.get("official_domains"))
+        elif choice == "8":
             break
         else:
             print(colors.danger("Invalid choice"))
@@ -310,6 +338,11 @@ def main():
     parser.add_argument("-o", "--output", type=str)
     parser.add_argument("--enable-sandbox-view", action="store_true")
     parser.add_argument("--monitor", action="store_true")
+    parser.add_argument("--no-banner", action="store_true")
+    parser.add_argument("--brand", type=str)
+    parser.add_argument("--watch", action="store_true")
+    parser.add_argument("--format", type=str)
+    parser.add_argument("--threshold", type=int, default=40)
     args = parser.parse_args()
 
     lang = args.lang
@@ -320,6 +353,8 @@ def main():
         remove_brand(args.remove_brand); return
     if args.list_brands:
         list_brands(); return
+    if args.brand:
+        args.domains = args.brand
 
     if args.enable_sandbox_view:
         print(colors.warn("Sandbox view not implemented in Phase 1 (passive only)."))
@@ -340,7 +375,7 @@ def main():
         res = monitor_brands(since=args.since, lang=lang)
     else:
         try:
-            interactive_menu(lang=lang)
+            interactive_menu(lang=lang, show_banner=(not args.no_banner))
         except (EOFError, KeyboardInterrupt):
             pass
         return
