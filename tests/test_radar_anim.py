@@ -4,10 +4,11 @@ from kararadar.core.radar_anim import RadarAnimation, render_frame, RadarState
 import io
 
 
-def test_nontty_disable(monkeypatch):
+def test_nontty_line_mode(monkeypatch):
     monkeypatch.setattr("sys.stdout.isatty", lambda: False)
     anim = RadarAnimation(enabled=True)
-    assert anim.enabled is False
+    assert anim.enabled is True
+    assert anim._line_mode is True
 
 
 def test_frame_size():

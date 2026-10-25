@@ -329,6 +329,13 @@ MIT.
 - CI workflow (pytest on push/PR)
 - Brand variant generator
 
+## Animation
+
+- Live radar animation runs during scans (green theme, ~12 FPS).
+- Non-TTY/CI mode prints a one-line frame every ~2 seconds.
+- Disable with `--json` or `--no-anim`.
+- Preview: `python main.py --demo-anim`.
+
 ## 🤖 Disclosure
 
 **AI-assisted development.**

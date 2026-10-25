@@ -153,7 +153,7 @@ def analyze_domains(domains, lang="az", since=None, show=True, animated=True):
         from kararadar.core.radar_anim import RadarAnimation
     except Exception:
         use_anim = False
-    anim = RadarAnimation(enabled=use_anim) if use_anim else None
+    anim = RadarAnimation("Scanning...", enabled=use_anim) if use_anim else None
     ctx = anim if anim is not None else _NullCtx()
     with ctx:
         if anim is not None and anim.enabled:
@@ -407,7 +407,7 @@ def main():
 
     if args.demo_anim:
         from kararadar.core.radar_anim import RadarAnimation
-        with RadarAnimation(enabled=True) as anim:
+        with RadarAnimation("Demo scan", enabled=True) as anim:
             anim.set_total(5)
             import time as _t
             for i in range(5):

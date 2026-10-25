@@ -160,10 +160,12 @@ def render_frame(state, width=32):
 
 
 class RadarAnimation:
-    def __init__(self, enabled=True):
-        self.enabled = bool(enabled) and _tty()
+    def __init__(self, message="Scanning...", enabled=True):
+        self.message = message
+        self.enabled = bool(enabled)
         if _cols() < 60:
             self.enabled = False
+        self._line_mode = self.enabled and (not _tty())
         self.state = RadarState()
         self._thread = None
         self._stop = threading.Event()
@@ -173,8 +175,12 @@ class RadarAnimation:
     def __enter__(self):
         if not self.enabled:
             return self
-        _hide_cursor()
         self.state.start_time = time.time()
+        if self._line_mode:
+            self._thread = threading.Thread(target=self._run_lines, daemon=True)
+            self._thread.start()
+            return self
+        _hide_cursor()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
         return self
@@ -183,7 +189,32 @@ class RadarAnimation:
         if not self.enabled:
             return False
         self.stop()
+        if not self._line_mode:
+            _show_cursor()
         return False
+
+    def _run_lines(self):
+        syms = ["◜", "◝", "◞", "◟"]
+        i = 0
+        green = "[32m" if _color_ok() else ""
+        reset = "[0m" if green else ""
+        while not self._stop.is_set():
+            with self.state.lock:
+                stage = self.state.stage
+                scanned = self.state.scanned
+                total = self.state.total
+                elapsed = time.time() - self.state.start_time
+            frac = 0.0 if total == 0 else min(1.0, scanned / max(1, total))
+            sym = syms[i % len(syms)]
+            line = f"{green}{sym} {self.message} | {stage} | {int(frac*100)}% | {scanned}/{total} | {elapsed:.1f}s{reset}"
+            print(line, flush=True)
+            i += 1
+            # wait ~2s in small increments to allow stop
+            for _ in range(20):
+                if self._stop.is_set():
+                    break
+                time.sleep(0.1)
+        print(f"{green}scan complete{reset}", flush=True)
 
     def _run(self):
         while not self._stop.is_set():
@@ -229,7 +260,8 @@ class RadarAnimation:
         self._stop.set()
         if self._thread:
             self._thread.join(timeout=1.0)
-        _show_cursor()
+        if not self._line_mode:
+            _show_cursor()
 
     def set_stage(self, stage):
         with self.state.lock:
@@ -258,3 +290,22 @@ class RadarAnimation:
     def set_total(self, n):
         with self.state.lock:
             self.state.total = n
+
+
+def with_radar(text="Scanning..."):
+    def deco(fn):
+        def wrapper(*a, **k):
+            with RadarAnimation(text):
+                return fn(*a, **k)
+        return wrapper
+    return deco
+
+
+def _color_ok():
+    # best-effort: env or tty
+    if os.getenv("NO_COLOR"):
+        return False
+    try:
+        return sys.stdout.isatty()
+    except Exception:
+        return False
