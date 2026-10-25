@@ -1,0 +1,4 @@
+language: az
+report_format: console
+alert_threshold: 40
+webhook_url: ""

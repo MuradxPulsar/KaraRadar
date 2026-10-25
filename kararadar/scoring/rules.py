@@ -4,6 +4,28 @@ import datetime
 SUSPICIOUS_WORDS = ["login", "secure", "verify", "bonus", "az", "support", "update"]
 ABUSED_TLDS = {".top", ".xyz", ".buzz", ".click", ".live", ".rest", ".cam"}
 
+try:
+    import yaml
+    HAS_YAML=True
+except Exception:
+    yaml=None
+    HAS_YAML=False
+import os
+
+def _load_weights():
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "config", "rules.yaml")
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = yaml.safe_load(f) if yaml else {}
+        w = data.get("weights", {})
+        if w:
+            return w
+    except Exception:
+        pass
+    return {}
+
+_LOADED = _load_weights()
+
 BRAND_WEIGHTS = {
     "typosquat": 30,
     "homoglyph": 40,
@@ -112,3 +134,6 @@ def score_domain(domain, rdap=None, dns=None, ip_list=None, brand_matches=None):
     return {"score": total, "verdict": verdict, "signals": [
         {"signal": s, "weight": w, "detail": d} for (s, w, d) in signals
     ], "brand_match": brand_match}
+# apply yaml overrides if present
+if _LOADED:
+    BRAND_WEIGHTS.update({k: v for k, v in _LOADED.items() if k in BRAND_WEIGHTS or True})

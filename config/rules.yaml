@@ -1,0 +1,19 @@
+weights:
+  typosquat: 30
+  homoglyph: 40
+  added_word: 20
+  tld_swap: 25
+  hyphen_merge: 15
+  transposition: 25
+  idn_punycode: 40
+  fuzzy: 15
+  domain_age_30: 35
+  domain_age_90: 20
+  suspicious_word: 10
+  abused_tld: 25
+  missing_spf: 8
+  missing_dmarc: 8
+  hosting_flag: 15
+  proxy_flag: 15
+  foreign_hosting: 10
+  aggregation_bonus: 20
