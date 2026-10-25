@@ -224,11 +224,15 @@ def list_brands():
 def interactive_menu(lang="az"):
     _banner()
     while True:
-        print(colors.header("1. Brand monitoring (CT discovery)"))
-        print("2. Analyze my own domains")
-        print("3. Manage brands (add/remove/list)")
-        print("4. Settings")
-        print("5. Exit")
+        print(colors.header("╔════════════════════════════════════════════════════════════════════════════╗"))
+        print(colors.header("║ KaraRadar — Interactive Menu                                               ║"))
+        print(colors.header("╠════════════════════════════════════════════════════════════════════════════╣"))
+        print(colors.ok("║ 1 │ Brand monitoring (CT discovery mode)                                   ║"))
+        print(colors.info("║ 2 │ Analyze my own domains (domain1,domain2 or .txt)                      ║"))
+        print(colors.warn("║ 3 │ Manage brands (add / remove / list — persists to brands.yaml)          ║"))
+        print(colors.header("║ 4 │ Settings (language AZ/EN, report format)                               ║"))
+        print(colors.danger("║ 5 │ Exit                                                                   ║"))
+        print(colors.header("╚════════════════════════════════════════════════════════════════════════════╝"))
         choice = input("> ").strip()
         if choice == "1":
             since = input("Since N days (blank=all): ").strip()

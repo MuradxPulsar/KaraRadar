@@ -45,6 +45,43 @@ CMD with pure-Python dependencies. Reports are generated in **AZ & EN**.
 
 ---
 
+## 🎨 Tool appearance (CLI)
+
+```
+ _  __               ____           _            
+| |/ /__ _ _ __ __ _|  _ \ __ _  __| | __ _ _ __ 
+| ' // _` | '__/ _` | |_) / _` |/ _` |/ _` | '__|
+| . \ (_| | | | (_| |  _ < (_| | (_| | (_| | |   
+|_|\_\__,_|_|  \__,_|_| \_\__,_|\__,_|\__,_|_|   
+                                                 
+       .---.
+      /     \
+     | o  o |
+     |   ^  |
+      \  -  /   KaraRadar
+       '---'
+╔════════════════════════════════════════════════════════════════════════════╗
+║ KaraRadar — Interactive Menu                                               ║
+╠════════════════════════════════════════════════════════════════════════════╣
+║ 1 │ Brand monitoring (CT discovery mode)                                    ║
+║ 2 │ Analyze my own domains (domain1,domain2 or .txt)                       ║
+║ 3 │ Manage brands (add / remove / list — persists to brands.yaml)           ║
+║ 4 │ Settings (language AZ/EN, report format)                                ║
+║ 5 │ Exit                                                                   ║
+╚════════════════════════════════════════════════════════════════════════════╝
++----------------------------------------------------------------------------+
+| Domain: kapital-bank.az                                                    |
+| Qərar: brend təhliki şübhəsi   Xal: 75                                    |
+|                                                                            |
+| NİYƏ?                                                                      |
+|   - brand lookalike (typosquat) (+30): Levenshtein distance: 1              |
+|   - suspicious words (+10): az                                             |
+|                                                                            |
+| [i] rəsmi kanalla yoxla                                                   |
+| [w] Bu avtomatik ilkin qiymətləndirmədir, insan yoxlaması tələb olunur     |
++----------------------------------------------------------------------------+
+```
+
 ## 📦 Installation
 
 ```bash
