@@ -166,7 +166,7 @@ def analyze_domains(domains, lang="az", since=None, show=True):
             body.append("")
             body.append(f"{colors.info(t['advice'])}")
             body.append(f"{colors.warn(t['disclaimer'])}")
-            print(colors.card("\n".join(body), col))
+            colors.print_card("\n".join(body), col)
         out.append(r)
     return out
 
@@ -202,7 +202,7 @@ def add_brand(spec):
     name = parts[0].strip()
     kws = [x.strip() for x in parts[1].split(",")] if len(parts) > 1 else []
     doms = [x.strip() for x in parts[2].split(",")] if len(parts) > 2 else []
-    path = os.path.join("config", "brands.yaml")
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config", "brands.yaml")
     # append using minimal text append
     with open(path, "a", encoding="utf-8") as f:
         f.write(f"\n  - name: \"{name}\"\n")
@@ -212,7 +212,7 @@ def add_brand(spec):
 
 
 def remove_brand(name):
-    path = os.path.join("config", "brands.yaml")
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config", "brands.yaml")
     brands = load_brands(path)
     brands = [b for b in brands if b.get("name") != name]
     # rewrite

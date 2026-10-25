@@ -72,10 +72,11 @@ def score_domain(domain, rdap=None, dns=None, ip_list=None, brand_matches=None):
             break
     # email security (SPF/DMARC)
     dd = dns or {}
-    if dd and not dd.get("SPF"):
+    has_dns = bool(dd.get("A") or dd.get("MX") or dd.get("NS") or dd.get("TXT"))
+    if has_dns and not dd.get("SPF"):
         signals.append(("missing SPF", 8, "no SPF TXT record"))
         total += 8
-    if dd and not dd.get("DMARC"):
+    if has_dns and not dd.get("DMARC"):
         signals.append(("missing DMARC", 8, "no DMARC policy"))
         total += 8
 
