@@ -8,6 +8,7 @@ import sys
 import threading
 import time
 
+_current_anim = None
 _HIDE = "\x1b[?25l"
 _SHOW = "\x1b[?25h"
 _CLEAR_LINE = "\x1b[K"
@@ -57,6 +58,7 @@ class RadarState:
         self.total = 0
         self.start_time = time.time()
         self.blips = []  # (x,y,color)
+        self.checked = []  # last 8 lines
         self.sweep = 0.0
         self.done = False
 
@@ -156,6 +158,13 @@ def render_frame(state, width=32):
     lines.append(f"Scanned: {scanned} | brand-risk: {brand} | infra-risk: {infra} | errors: {errors}")
     lines.append(f"Current: {current[:40]}")
     lines.append(f"Elapsed: {elapsed:.1f}s")
+    with state.lock:
+        checked_list = list(state.checked)
+    if checked_list:
+        lines.append("")
+        lines.append("Recent checks:")
+        for c in checked_list[-8:]:
+            lines.append("  " + c)
     return lines
 
 
@@ -166,6 +175,7 @@ class RadarAnimation:
         if _cols() < 60:
             self.enabled = False
         self._line_mode = self.enabled and (not _tty())
+        self._prev_checked = 0
         self.state = RadarState()
         self._thread = None
         self._stop = threading.Event()
@@ -176,6 +186,7 @@ class RadarAnimation:
         if not self.enabled:
             return self
         self.state.start_time = time.time()
+        globals()['_current_anim'] = self
         if self._line_mode:
             self._thread = threading.Thread(target=self._run_lines, daemon=True)
             self._thread.start()
@@ -188,6 +199,7 @@ class RadarAnimation:
     def __exit__(self, *exc):
         if not self.enabled:
             return False
+        globals()['_current_anim'] = None
         self.stop()
         if not self._line_mode:
             _show_cursor()
@@ -210,6 +222,13 @@ class RadarAnimation:
             print(line, flush=True)
             i += 1
             # wait ~2s in small increments to allow stop
+            # print any newly logged checked lines immediately
+            with self.state.lock:
+                cur = list(self.state.checked)
+            if len(cur) > self._prev_checked:
+                for c in cur[self._prev_checked:]:
+                    print(c, flush=True)
+                self._prev_checked = len(cur)
             for _ in range(20):
                 if self._stop.is_set():
                     break
@@ -287,14 +306,30 @@ class RadarAnimation:
             elif verdict == "infrastruktur şübhəsi":
                 self.state.infra_risk += 1
 
+    def log(self, msg):
+        with self.state.lock:
+            self.state.checked.append(str(msg))
+            if len(self.state.checked) > 8:
+                del self.state.checked[0]
+
     def set_total(self, n):
         with self.state.lock:
             self.state.total = n
 
 
+def get_current():
+    return globals().get('_current_anim')
+
+def log_checked(msg):
+    anim = get_current()
+    if anim is not None:
+        anim.log(msg)
+
 def with_radar(text="Scanning..."):
     def deco(fn):
         def wrapper(*a, **k):
+            if get_current() is not None:
+                return fn(*a, **k)
             with RadarAnimation(text):
                 return fn(*a, **k)
         return wrapper

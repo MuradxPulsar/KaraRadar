@@ -1,10 +1,12 @@
 """CertSpotter v1 (backup CT source)."""
 import time
 import requests
+from kararadar.core.radar_anim import log_checked, with_radar
 
 API = "https://api.certspotter.com/v1/issuances"
 TIMEOUT = 15
 
+@with_radar("CT certspotter")
 def get_issuances(domain, limit=50):
     params = {
         "domain": domain,
@@ -29,4 +31,5 @@ def get_issuances(domain, limit=50):
         for dn in iss.get("dns_names") or [iss.get("common_name")]:
             if dn:
                 out.append({"dns_name": dn, "issuer": iss.get("issuer", {}).get("organization_name")})
+    log_checked(f"✔ certspotter {domain} → {len(out)} names")
     return out
