@@ -10,17 +10,24 @@ if __name__ == "__main__" and __package__ is None:
 def _banner():
     try:
         import pyfiglet
-        print(pyfiglet.figlet_format("KaraRadar"))
+        print(colors.header(pyfiglet.figlet_format("KaraRadar")))
     except Exception:
-        print("KaraRadar")
-    print(r"""
-       .---.
-      /     \
-     |  o o  |
-     |   ^   |
-      \  -  /   crow / kararadar
-       '---'
-""")
+        print(colors.header("KaraRadar"))
+    print(colors.header(r"""
+                        .-=========-.
+                     .-'             '-.
+                   .'  .-===========-.  '.
+                  /   /   .-------.   \   \
+                 |   |   / (  ) (  )\   |   |
+                 |   |  | (  ( (  )  ) |   |
+                 |   |  | (  ( (  )  ) |   |
+                 |   |   \ (  ) (  ) /   |   |
+                  \   \   '-------'   /   /
+                   '.  '-------------'  .'
+                     '-.             .-'
+                        '-=========-'
+            RADAR MODE • Azərbaycan brand impersonation detector
+"""))
 
 
 from kararadar.core import colors, cache, report
@@ -167,6 +174,7 @@ def analyze_domains(domains, lang="az", since=None, show=True):
 def monitor_brands(since=None, lang="az", limit=30):
     brands = load_brands()
     candidates = set()
+    print(colors.header("[1/3] CT ma'lumot toplanmoqda..."))
     for b in brands:
         for kw in b.get("keywords", []):
             try:
@@ -178,9 +186,12 @@ def monitor_brands(since=None, lang="az", limit=30):
                 pass
             if len(candidates) > 500:
                 break
+    print(colors.ok(f"[2/3] {len(candidates)} unikal domen tapildi"))
     # filter official/whitelist
     cand_list = [d for d in candidates if not brandmatch.is_whitelisted(d)]
     cand_list = cand_list[:limit]
+    print(colors.info(f"[3/3] {len(cand_list)} şübhəli namizəd təhlil olunur"))
+    return analyze_domains(cand_list, lang=lang, since=since, show=True)
     print(colors.info(f"Discovered {len(candidates)} unique, analyzing {len(cand_list)}"))
     return analyze_domains(cand_list, lang=lang, since=since, show=True)
 
