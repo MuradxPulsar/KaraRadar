@@ -292,6 +292,16 @@ MIT.
 
 ---
 
+## Added (polish phase)
+
+- Watch mode, history & diff, whitelist management menu options
+- AZ normalization + subdomain trick detection
+- Config/rules YAML + hot-reload scoring weights
+- HTTP safe probe (no form submission)
+- Reputation lookups (optional API keys)
+- CI workflow (pytest on push/PR)
+- Brand variant generator
+
 ## 🤖 Disclosure
 
 **AI-assisted development.**
