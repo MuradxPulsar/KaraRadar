@@ -100,14 +100,41 @@ CMD with pure-Python dependencies. Reports are generated in **AZ & EN**.
 
 ## 📦 Installation
 
-```bash
+Use **Python 3.12 or 3.13** (not 3.15 — pyyaml wheels may be missing and
+require MSVC build tools).
+
+### Windows
+
+```bat
 git clone https://github.com/MuradxPulsar/KaraRadar.git
 cd KaraRadar
+py -3.12 -m venv .venv
+.venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Python **3.12–3.13** recommended (`3.15` lacks some wheels; a minimal YAML
-fallback parser is included).
+Do **not** use the `python` shim from `WindowsApps`; it may be unavailable.
+If `python` is not found, call the interpreter by full path, e.g.
+`C:\Users\<you>\AppData\Local\Programs\Python\Python312\python.exe`.
+
+### Linux / macOS
+
+```bash
+git clone https://github.com/MuradxPulsar/KaraRadar.git
+cd KaraRadar
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Optional (for YAML config weights):
+
+```bash
+pip install pyyaml
+```
+
+If this fails on your Python (e.g. 3.15 without MSVC), skip it — KaraRadar
+falls back to its built-in minimal YAML parser and default weights.
 
 ---
 
