@@ -1,0 +1,23 @@
+name: Daily OSINT run
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python main.py --monitor --lang az -o stats.json
+      - name: Publish aggregate stats only
+        run: echo "Aggregate stats generated; no individual domain names published."
