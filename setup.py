@@ -7,11 +7,10 @@ setup(
     install_requires=[
         "requests",
         "dnspython",
-        "pyyaml",
-        "colorama",
+                "colorama",
         "pyfiglet",
     ],
-    extras_require={"ai": ["ollama"]},
+    extras_require={"ai": ["ollama"], "yaml": ["pyyaml>=6.0"]},
     entry_points={"console_scripts": ["kararadar=kararadar.main:main"]},
     python_requires=">=3.12",
     license="MIT",
