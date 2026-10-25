@@ -291,8 +291,15 @@ def interactive_menu(lang="az", show_banner=True):
         print(colors.header("╚════════════════════════════════════════════════════════════════════════════╝"))
         choice = input("> ").strip()
         if choice == "1":
-            since = input("Since N days (blank=all): ").strip()
-            since = int(since) if since else None
+            since_txt = input("Since N days (blank=all): ").strip().lower()
+            if not since_txt or since_txt in ("n","all","*","none"):
+                since = None
+            else:
+                try:
+                    since = int(since_txt)
+                except ValueError:
+                    print(colors.warn("Sayı yanlışdır, hamısı istifadə olunur."))
+                    since = None
             res = monitor_brands(since=since, lang=lang)
             _post_report(res, lang)
         elif choice == "2":
