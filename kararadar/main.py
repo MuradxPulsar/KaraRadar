@@ -39,6 +39,7 @@ from kararadar.scoring import rules
 from kararadar.reports import templates, html_gen
 from kararadar.ai import ollama_sum
 from kararadar.detection.brandmatch import load_brands
+from kararadar.core.radar_anim import RadarAnimation
 from kararadar import db, notify, i18n
 
 BANNER = None
@@ -139,21 +140,46 @@ def analyze_one(domain, lang="az", since=None):
     return result
 
 
-def analyze_domains(domains, lang="az", since=None, show=True):
+class _NullCtx:
+    def __enter__(self): return self
+    def __exit__(self, *a): return False
+
+
+def analyze_domains(domains, lang="az", since=None, show=True, animated=True):
     out = []
-    for d in domains:
-        d = d.strip()
-        if not d:
-            continue
-        if show:
-            print(colors.scanning(f"Analyzing {d}..."))
-        with spinner.Spinner(f"Analyzing {d}"):
-            r = analyze_one(d, lang=lang, since=since)
-        if r.get("_skip"):
-            continue
-        if show:
-            t = templates.STRINGS[lang]
-            # resolve color
+    domains = [d for d in domains]
+    use_anim = animated and sys.stdout.isatty() and not (len(domains) == 0)
+    try:
+        from kararadar.core.radar_anim import RadarAnimation
+    except Exception:
+        use_anim = False
+    anim = RadarAnimation(enabled=use_anim) if use_anim else None
+    ctx = anim if anim is not None else _NullCtx()
+    with ctx:
+        if anim is not None and anim.enabled:
+            anim.set_total(len([d for d in domains if str(d).strip()]))
+        for d in domains:
+            d = d.strip() if isinstance(d, str) else d
+            if not d:
+                continue
+            if anim is not None and anim.enabled:
+                anim.set_current(d)
+                anim.set_stage("DNS / RDAP / IP / Scoring")
+            else:
+                if show:
+                    print(colors.scanning(f"Analyzing {d}..."))
+            with spinner.Spinner(f"Analyzing {d}") if not (anim and anim.enabled) else _NullCtx():
+                r = analyze_one(d, lang=lang, since=since)
+            if r.get("_skip"):
+                continue
+            out.append(r)
+            if anim is not None and anim.enabled:
+                anim.advance()
+                anim.add_blip(r.get("domain"), r.get("verdict"))
+    # print results after animation
+    if show:
+        t = templates.STRINGS[lang]
+        for r in out:
             import colorama
             col = colors.VERDICT_COLOR.get(r.get("verdict"), colorama.Fore.CYAN)
             body = []
@@ -171,7 +197,6 @@ def analyze_domains(domains, lang="az", since=None, show=True):
             body.append(f"{colors.info(t['advice'])}")
             body.append(f"{colors.warn(t['disclaimer'])}")
             colors.print_card("\n".join(body), col)
-        out.append(r)
     return out
 
 
@@ -343,6 +368,7 @@ def main():
     parser.add_argument("--watch", action="store_true")
     parser.add_argument("--format", type=str)
     parser.add_argument("--threshold", type=int, default=40)
+    parser.add_argument("--demo-anim", action="store_true")
     args = parser.parse_args()
 
     lang = args.lang
@@ -359,6 +385,17 @@ def main():
     if args.enable_sandbox_view:
         print(colors.warn("Sandbox view not implemented in Phase 1 (passive only)."))
 
+    if args.demo_anim:
+        from kararadar.core.radar_anim import RadarAnimation
+        with RadarAnimation(enabled=True) as anim:
+            anim.set_total(5)
+            import time as _t
+            for i in range(5):
+                anim.set_current(f"demo-{i}.invalid")
+                _t.sleep(1)
+                anim.advance()
+                anim.add_blip(f"demo-{i}.invalid", "infrastruktur şübhəsi" if i%2 else "brend təhliki şübhəsi")
+        return
     # collect domains
     domains = []
     if args.domains:
@@ -370,7 +407,8 @@ def main():
     if args.monitor or (not domains and not sys.stdin.isatty()):
         pass
     if domains:
-        res = analyze_domains(domains, lang=lang, since=args.since, show=True)
+        animated = not (args.no_anim or args.json)
+        res = analyze_domains(domains, lang=lang, since=args.since, show=True, animated=animated)
     elif args.monitor:
         res = monitor_brands(since=args.since, lang=lang)
     else:
