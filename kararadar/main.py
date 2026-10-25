@@ -83,7 +83,6 @@ def analyze_one(domain, lang="az", since=None):
     # IP enrichment
     ips = dns.get("A", [])
     ip_list = []
-    C = cache.Cache()
     for ip in ips:
         info = C.get(f"ip:{ip}")
         if info is None:
@@ -128,9 +127,14 @@ def analyze_one(domain, lang="az", since=None):
     # cert email template
     result["cert_email"] = templates.cert_email(domain, result["verdict"], result["score"], result["signals"])
     try:
-        cache.Cache().record_run(domain, result["verdict"], result["score"])
+        C.record_run(domain, result["verdict"], result["score"])
     except Exception:
         pass
+    finally:
+        try:
+            C.close()
+        except Exception:
+            pass
     return result
 
 
@@ -141,14 +145,13 @@ def analyze_domains(domains, lang="az", since=None, show=True):
         if not d:
             continue
         if show:
-            print(colors.info(f"Analyzing {d}..."))
+            print(colors.scanning(f"Analyzing {d}..."))
         with spinner.Spinner(f"Analyzing {d}"):
             r = analyze_one(d, lang=lang, since=since)
         if r.get("_skip"):
             continue
         if show:
             t = templates.STRINGS[lang]
-            vc = colors.VERDICT_COLOR.get(r.get("verdict"), Fore.CYAN if False else None)
             # resolve color
             import colorama
             col = colors.VERDICT_COLOR.get(r.get("verdict"), colorama.Fore.CYAN)
@@ -191,7 +194,6 @@ def monitor_brands(since=None, lang="az", limit=30):
     cand_list = [d for d in candidates if not brandmatch.is_whitelisted(d)]
     cand_list = cand_list[:limit]
     print(colors.info(f"[3/3] {len(cand_list)} şübhəli namizəd təhlil olunur"))
-    return analyze_domains(cand_list, lang=lang, since=since, show=True)
     print(colors.info(f"Discovered {len(candidates)} unique, analyzing {len(cand_list)}"))
     return analyze_domains(cand_list, lang=lang, since=since, show=True)
 
@@ -236,15 +238,15 @@ def interactive_menu(lang="az"):
     _banner()
     while True:
         print(colors.header("╔════════════════════════════════════════════════════════════════════════════╗"))
-        print(colors.header("║ KaraRadar — Interactive Menu                                               ║"))
+        print(colors.header("║ 🛰  KaraRadar — Interactive Menu                                           ║"))
         print(colors.header("╠════════════════════════════════════════════════════════════════════════════╣"))
-        print(colors.ok("║ 1 │ Brand monitoring (CT discovery mode)                                   ║"))
-        print(colors.info("║ 2 │ Analyze my own domains (domain1,domain2 or .txt)                      ║"))
-        print(colors.warn("║ 3 │ Manage brands (add / remove / list — persists to brands.yaml)          ║"))
-        print(colors.header("║ 4 │ Settings (language AZ/EN, report format)                               ║"))
-        print(colors.danger("║ 5 │ Exit                                                                   ║"))
+        print(colors.ok("║ 1 │ 🔍 Brand monitoring (CT discovery mode)                              ║"))
+        print(colors.info("║ 2 │ 🌐 Analyze my own domains (domain1,domain2 or .txt)                  ║"))
+        print(colors.warn("║ 3 │ 🏷  Manage brands (add / remove / list — persists to brands.yaml)      ║"))
+        print(colors.header("║ 4 │ ⚙️  Settings (language AZ/EN, report format)                           ║"))
+        print(colors.danger("║ 5 │ 🚪 Exit                                                                ║"))
         print(colors.header("╚════════════════════════════════════════════════════════════════════════════╝"))
-        choice = input("> ").strip()
+        choice = input(colors.scanning("> ")).strip()
         if choice == "1":
             since = input("Since N days (blank=all): ").strip()
             since = int(since) if since else None
@@ -353,8 +355,10 @@ def main():
     # output
     fmt = "json" if args.json else "txt"
     if args.output:
-        report.save(res, fmt if not args.output.endswith((".html", ".csv", ".md", ".json", ".txt")) else args.output.split(".")[-1],
-                    args.output, lang=lang)
+        ext = os.path.splitext(args.output)[1].lower().lstrip(".")
+        if ext in ("html", "csv", "md", "json", "txt"):
+            fmt = ext
+        report.save(res, fmt, args.output, lang=lang)
         print(colors.ok(f"Saved {args.output}"))
     else:
         if args.json:

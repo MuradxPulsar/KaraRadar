@@ -70,7 +70,7 @@ h1{{color:var(--fg);}}.card{{background:var(--card);border-radius:10px;padding:1
 .note{{font-size:.85em;color:#9ca3af;font-style:italic;}}
 .toggle{{position:fixed;top:12px;right:12px;padding:6px 10px;cursor:pointer;border-radius:6px;border:1px solid #999;background:var(--card);color:var(--fg);}}
 </style>
-<script>function toggleTheme(){{const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',t);localStorage.setItem('theme',t);}}(function(){{const t=localStorage.getItem('theme)||'light';document.documentElement.setAttribute('data-theme',t);}})();</script></head><body>
+<script>function toggleTheme(){{const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',t);localStorage.setItem('theme',t);}}(function(){{const t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t);}})();</script></head><body>
 <button class="toggle" onclick="toggleTheme()">Toggle theme</button>
 <h1>{t['title']}</h1>
 {rows}

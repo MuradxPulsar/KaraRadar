@@ -1,5 +1,10 @@
 # KaraRadar
 
+![Python](https://img.shields.io/badge/python-3.12%2B-blue?logo=python)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Tests](https://img.shields.io/badge/tests-6%20passed-brightgreen)
+![Status](https://img.shields.io/badge/status-active-success)
+
 **KaraRadar** is a passive OSINT anti-phishing CLI tool for detecting domains
 that impersonate Azerbaijani brands. It performs **zero connections to target
 websites** (Phase 1), requires **no API keys by default**, and runs on Windows 11
@@ -276,3 +281,38 @@ MIT.
 **AI-assisted development.**
 
 "Early warning, not complete protection."
+
+## Function Reference
+
+### kararadar.core
+- cache.Cache(path, ttl): SQLite cache. Methods get, set, record_run, trend, purge, close.
+- colors: ok, danger, info, header, warn, success, error, scanning, card, print_card, gradient, VERDICT_COLOR.
+- spinner.Spinner(message): context-manager spinner.
+- report: to_json, to_txt, to_csv, to_md, to_html, save.
+
+### kararadar.detection
+- brandmatch.load_brands(path=None), is_whitelisted(domain), match(candidate, brands=None)
+- similarity: levenshtein, normalize_domain, registered_name, is_punycode, homoglyph_normalize, detect(candidate, brand), has_suspicious_word, abused_tld. Constants HOMOGLYPHS, SUSPICIOUS_WORDS, ABUSED_TLDS.
+
+### kararadar.scoring
+- rules.score_domain(domain, rdap, dns, ip_list, brand_matches) -> dict(score, verdict, signals, brand_match)
+- _age_days(created)
+
+### kararadar.enrichment
+- rdap.lookup(domain)
+- dnsmod.resolve(domain)
+- ipinfo.lookup(ip)
+
+### kararadar.sources
+- crtsh.search_keyword(keyword, limit=200), search_domain(domain, limit=100)
+- certspotter.get_issuances(domain, limit=50)
+
+### kararadar.ai
+- ollama_sum.summarize(results)
+
+### kararadar.reports
+- templates (STRINGS, CERT_EMAIL_TEMPLATE, cert_email)
+- html_gen.generate(results, lang)
+
+### CLI functions (kararadar.main)
+- main(), interactive_menu(lang), analyze_one(domain, lang, since), analyze_domains(...), monitor_brands(...), add_brand(spec), remove_brand(name), list_brands(), is_whitelisted(d).

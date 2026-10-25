@@ -19,6 +19,13 @@ class Cache:
         )
         self._conn.commit()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+        return False
+
     def get(self, key):
         cur = self._conn.execute(
             "SELECT value, expires FROM cache WHERE key=?", (key,))
@@ -61,4 +68,7 @@ class Cache:
         self._conn.commit()
 
     def close(self):
-        self._conn.close()
+        try:
+            self._conn.close()
+        except Exception:
+            pass
