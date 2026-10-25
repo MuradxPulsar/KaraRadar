@@ -156,3 +156,20 @@ def abused_tld(domain):
         if domain.lower().endswith(t):
             return t
     return None
+
+
+def generate_variants(name):
+    """Generate simple lookalike variants for a brand name."""
+    name = name.lower().strip()
+    variants = set([name])
+    # hyphen insert
+    if "-" not in name:
+        variants.add(name[:len(name)//2] + "-" + name[len(name)//2:])
+    # homoglyph-ish swaps
+    for a,b in (("o","0"),("l","1"),("i","1"),("a","4")):
+        if a in name:
+            variants.add(name.replace(a,b))
+    # added suspicious word
+    for w in ["login","secure","bank"]:
+        variants.add(f"{name}-{w}")
+    return sorted(variants)
