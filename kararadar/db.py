@@ -3,7 +3,9 @@ import sqlite3, os, time, json
 DEFAULT_DB = os.path.join(os.path.expanduser("~"), ".kararadar.db")
 
 
-def _conn(path=DEFAULT_DB):
+def _conn(path=None):
+    if path is None:
+        path=DEFAULT_DB
     c = sqlite3.connect(path)
     c.execute("""CREATE TABLE IF NOT EXISTS runs(id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, lang TEXT)""")
     c.execute("""CREATE TABLE IF NOT EXISTS run_domains(run_id INTEGER, domain TEXT, verdict TEXT, score INTEGER)""")

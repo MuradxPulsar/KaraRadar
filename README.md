@@ -80,7 +80,10 @@ CMD with pure-Python dependencies. Reports are generated in **AZ & EN**.
 ║ 2 │ Analyze my own domains (domain1,domain2 or .txt)                       ║
 ║ 3 │ Manage brands (add / remove / list — persists to brands.yaml)           ║
 ║ 4 │ Settings (language AZ/EN, report format)                                ║
-║ 5 │ Exit                                                                   ║
+║ 5 │ Watch mode (live CT stream with alerts)                                ║
+║ 6 │ History & reports (browse past scans, diff)                            ║
+║ 7 │ Whitelist management (official domains)                               ║
+║ 8 │ Exit                                                                  ║
 ╚════════════════════════════════════════════════════════════════════════════╝
 +----------------------------------------------------------------------------+
 | Domain: kapital-bank.az                                                    |
@@ -161,7 +164,12 @@ python main.py --domains x.az --ai
 | `--json` | JSON output |
 | `-o FILE` | output file (auto format by extension) |
 | `--ai` | optional local Ollama summary (OFF by default) |
-| `--enable-sandbox-view` | Phase 2 stub (read-only, default OFF) |
+| `--enable-sandbox-view
+--no-banner
+--brand
+--watch
+--format
+--threshold` | Phase 2 stub (read-only, default OFF) |
 
 ---
 
