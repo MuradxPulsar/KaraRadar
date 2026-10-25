@@ -200,7 +200,7 @@ def analyze_domains(domains, lang="az", since=None, show=True, animated=True):
     return out
 
 
-def monitor_brands(since=None, lang="az", limit=20, max_brands=12):
+def monitor_brands(since=None, lang="az", limit=15, max_brands=8):
     brands = load_brands()[:max_brands]
     candidates = set()
     keywords = []
@@ -280,16 +280,16 @@ def interactive_menu(lang="az", show_banner=True):
         print(colors.header("╔════════════════════════════════════════════════════════════════════════════╗"))
         print(colors.header("║ 🛰  KaraRadar — Interactive Menu                                           ║"))
         print(colors.header("╠════════════════════════════════════════════════════════════════════════════╣"))
-        print(colors.ok("║ 1 │ 🔍 Brand monitoring (CT discovery mode)                              ║"))
-        print(colors.info("║ 2 │ 🌐 Analyze my own domains (domain1,domain2 or .txt)                  ║"))
-        print(colors.warn("║ 3 │ 🏷  Manage brands (add / remove / list — persists to brands.yaml)      ║"))
+        print(colors.header("║ 1 │ 🔍 Brand monitoring (CT discovery mode)                              ║"))
+        print(colors.header("║ 2 │ 🌐 Analyze my own domains (domain1,domain2 or .txt)                  ║"))
+        print(colors.header("║ 3 │ 🏷  Manage brands (add / remove / list — persists to brands.yaml)      ║"))
         print(colors.header("║ 4 │ ⚙️  Settings (language AZ/EN, report format)                           ║"))
-        print(colors.scanning("║ 5 │ 👀 Watch mode (live CT stream with alerts)                            ║"))
-        print(colors.info("║ 6 │ 📜 History & reports (browse past scans, diff)                        ║"))
-        print(colors.ok("║ 7 │ 🛡  Whitelist management (official domains)                           ║"))
-        print(colors.danger("║ 8 │ 🚪 Exit                                                              ║"))
+        print(colors.header("║ 5 │ 👀 Watch mode (live CT stream with alerts)                            ║"))
+        print(colors.header("║ 6 │ 📜 History & reports (browse past scans, diff)                        ║"))
+        print(colors.header("║ 7 │ 🛡  Whitelist management (official domains)                           ║"))
+        print(colors.header("║ 8 │ 🚪 Exit                                                              ║"))
         print(colors.header("╚════════════════════════════════════════════════════════════════════════════╝"))
-        choice = input(colors.scanning("> ")).strip()
+        choice = input("> ").strip()
         if choice == "1":
             since = input("Since N days (blank=all): ").strip()
             since = int(since) if since else None
