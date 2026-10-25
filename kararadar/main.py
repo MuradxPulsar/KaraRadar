@@ -200,29 +200,42 @@ def analyze_domains(domains, lang="az", since=None, show=True, animated=True):
     return out
 
 
-def monitor_brands(since=None, lang="az", limit=30):
-    brands = load_brands()
+def monitor_brands(since=None, lang="az", limit=20, max_brands=12):
+    brands = load_brands()[:max_brands]
     candidates = set()
-    print(colors.header("[1/3] CT ma'lumot toplanmoqda..."))
+    keywords = []
     for b in brands:
-        for kw in b.get("keywords", []):
+        for kw in (b.get("keywords") or [])[:2]:
+            keywords.append(kw)
+    keywords = list(dict.fromkeys(keywords))[:25]
+    print(colors.header(f"[1/3] CT ma'lumot toplanmoqda ({len(keywords)} keyword)..."))
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    def _search(kw):
+        try:
+            from kararadar.sources import crtsh
+            return crtsh.search_keyword(kw, limit=80)
+        except Exception:
+            return []
+
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        futs = {ex.submit(_search, kw): kw for kw in keywords}
+        for fut in as_completed(futs):
+            kw = futs[fut]
             try:
-                with spinner.Spinner(f"CT search: {kw}"):
-                    ds = crtsh.search_keyword(kw)
-                for d in ds:
-                    candidates.add(d)
+                ds = fut.result()
             except Exception:
-                pass
-            if len(candidates) > 500:
+                ds = []
+            for d in ds:
+                candidates.add(d)
+            if len(candidates) >= 400:
                 break
     print(colors.ok(f"[2/3] {len(candidates)} unikal domen tapildi"))
-    # filter official/whitelist
     cand_list = [d for d in candidates if not brandmatch.is_whitelisted(d)]
     cand_list = cand_list[:limit]
-    print(colors.info(f"[3/3] {len(cand_list)} şübhəli namizəd təhlil olunur"))
+    print(colors.info(f"[3/3] {len(cand_list)} namizəd təhlil olunur"))
     print(colors.info(f"Discovered {len(candidates)} unique, analyzing {len(cand_list)}"))
     return analyze_domains(cand_list, lang=lang, since=since, show=True)
-
 
 def add_brand(spec):
     # spec: Name|kw1,kw2|dom1,dom2
