@@ -74,18 +74,29 @@ def homoglyph_normalize(s):
     return "".join(out)
 
 
+AZ_MAP = str.maketrans({
+    "ə": "e", "ı": "i", "ş": "s", "ç": "c", "ö": "o",
+    "ü": "u", "ğ": "g", "Ə": "E", "I": "i",
+})
+
+def az_normalize(s):
+    return s.translate(AZ_MAP)
+
+
 def detect(candidate, brand):
     """Compare candidate domain to a brand keyword/official domain.
     Returns list of (type, detail) tuples."""
     res = []
     cand = normalize_domain(candidate)
     c_name, c_tld = registered_name(cand)
+    c_name = az_normalize(c_name)
     # brand may be domain or keyword
     b = brand.strip().lower()
     if "." in b:
         b_name, b_tld = registered_name(b)
     else:
         b_name, b_tld = b, ""
+    b_name = az_normalize(b_name)
 
     # IDN / punycode
     if is_punycode(cand):
@@ -122,6 +133,11 @@ def detect(candidate, brand):
             if swapped == b_name:
                 res.append(("transposition", f"adjacent characters swapped at position {i}"))
                 break
+
+    # subdomain trick: brand appears in subdomain of unrelated registered domain
+    parts = cand.split(".")
+    if len(parts) > 2 and b_name and b_name in parts[:-2] and parts[-2] != b_name:
+        res.append(("subdomain_trick", f"brand in subdomain of '{parts[-2]}.{parts[-1]}'"))
 
     # homoglyph via difflib close
     if not res and b_name and difflib.SequenceMatcher(None, c_name, b_name).ratio() > 0.85 and c_name != b_name:
