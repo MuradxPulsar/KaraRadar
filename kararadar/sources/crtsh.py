@@ -3,28 +3,35 @@ import time
 import requests
 
 CRTSH = "https://crt.sh/"
-TIMEOUT = 15
+TIMEOUT = 10
 
 def _get(params):
-    for attempt in range(3):
+    for attempt in range(2):
         try:
             r = requests.get(CRTSH, params=params, timeout=TIMEOUT)
-            if r.status_code == 400:
-                raise RuntimeError("crt.sh HTTP 400")
+            if r.status_code in (400,404):
+                return None
+            if r.status_code >= 500:
+                raise RuntimeError(f"crt.sh HTTP {r.status_code}")
             r.raise_for_status()
             return r.json()
         except Exception:
-            if attempt == 2:
-                raise
+            if attempt == 1:
+                return None
             time.sleep(0.5 * (2 ** attempt))
 
 def search_keyword(keyword, limit=200):
     """Search CT logs for a brand keyword. Returns set of domains."""
-    params = {"q": f"%{keyword}%", "output": "json"}
+    kw = "".join(str(keyword).split()).lower()
+    params = {"q": f"%{kw}%", "output": "json"}
     try:
         data = _get(params)
     except Exception as e:
         print(f"[w] crt.sh search failed: {e}")
+        return []
+    if data is None:
+        return []
+    if data is None:
         return []
     domains = set()
     for entry in data or []:
@@ -44,6 +51,10 @@ def search_domain(domain, limit=100):
         data = _get(params)
     except Exception as e:
         print(f"[w] crt.sh search failed: {e}")
+        return []
+    if data is None:
+        return []
+    if data is None:
         return []
     out = []
     for entry in (data or [])[:limit]:
