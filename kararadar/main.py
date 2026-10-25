@@ -369,7 +369,7 @@ def _post_report(res, lang):
     fmt = input("Export format (skip/json/csv/txt/html/md): ").strip().lower()
     if not fmt or fmt == "skip":
         return
-    path = input("Output file path: ").strip()
+    path = input("Output file path: ").strip().strip('"').strip("'")
     if not path:
         path = f"report.{fmt if fmt != 'markdown' else 'md'}"
     report.save(res, fmt, path, lang=lang)
