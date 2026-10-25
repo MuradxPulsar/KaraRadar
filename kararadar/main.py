@@ -39,7 +39,7 @@ from kararadar.scoring import rules
 from kararadar.reports import templates, html_gen
 from kararadar.ai import ollama_sum
 from kararadar.detection.brandmatch import load_brands
-from kararadar.core.radar_anim import RadarAnimation
+from kararadar.core.radar_anim import RadarAnimation, with_radar, log_checked
 from kararadar import db, notify, i18n
 
 BANNER = None
@@ -49,6 +49,7 @@ def is_whitelisted(d):
     return brandmatch.is_whitelisted(d)
 
 
+@with_radar("Analyze one")
 def analyze_one(domain, lang="az", since=None):
     domain = domain.strip().lower()
     result = {
@@ -113,6 +114,7 @@ def analyze_one(domain, lang="az", since=None):
             except Exception:
                 pass
 
+    log_checked(f"✔ {domain} → RDAP/DNS/IP done")
     scoring = rules.score_domain(domain, rdap=ri, dns=dns, ip_list=ip_list, brand_matches=matches)
     result["verdict"] = scoring["verdict"]
     result["score"] = scoring["score"]
@@ -145,12 +147,13 @@ class _NullCtx:
     def __exit__(self, *a): return False
 
 
+@with_radar("Analyze domains")
 def analyze_domains(domains, lang="az", since=None, show=True, animated=True):
     out = []
     domains = [d for d in domains]
     use_anim = animated and sys.stdout.isatty() and not (len(domains) == 0)
     try:
-        from kararadar.core.radar_anim import RadarAnimation
+        from kararadar.core.radar_anim import RadarAnimation, with_radar, log_checked
     except Exception:
         use_anim = False
     anim = RadarAnimation("Scanning...", enabled=use_anim) if use_anim else None
@@ -200,6 +203,7 @@ def analyze_domains(domains, lang="az", since=None, show=True, animated=True):
     return out
 
 
+@with_radar("Brand monitoring")
 def monitor_brands(since=None, lang="az", limit=15, max_brands=8):
     brands = load_brands()[:max_brands]
     candidates = set()
@@ -214,8 +218,11 @@ def monitor_brands(since=None, lang="az", limit=15, max_brands=8):
     def _search(kw):
         try:
             from kararadar.sources import crtsh
-            return crtsh.search_keyword(kw, limit=80)
+            ds, reason = crtsh.search_keyword_status(kw, limit=80)
+            return ds
         except Exception:
+            from kararadar.core.radar_anim import log_checked
+            log_checked(f"✖ crt.sh \"{kw}\" → exception")
             return []
 
     with ThreadPoolExecutor(max_workers=4) as ex:
@@ -280,14 +287,14 @@ def interactive_menu(lang="az", show_banner=True):
         print(colors.header("╔════════════════════════════════════════════════════════════════════════════╗"))
         print(colors.header("║ 🛰  KaraRadar — Interactive Menu                                           ║"))
         print(colors.header("╠════════════════════════════════════════════════════════════════════════════╣"))
-        print(colors.header("║ 1 │ 🔍 Brand monitoring (CT discovery mode)                              ║"))
-        print(colors.header("║ 2 │ 🌐 Analyze my own domains (domain1,domain2 or .txt)                  ║"))
-        print(colors.header("║ 3 │ 🏷  Manage brands (add / remove / list — persists to brands.yaml)      ║"))
-        print(colors.header("║ 4 │ ⚙️  Settings (language AZ/EN, report format)                           ║"))
-        print(colors.header("║ 5 │ 👀 Watch mode (live CT stream with alerts)                            ║"))
-        print(colors.header("║ 6 │ 📜 History & reports (browse past scans, diff)                        ║"))
-        print(colors.header("║ 7 │ 🛡  Whitelist management (official domains)                           ║"))
-        print(colors.header("║ 8 │ 🚪 Exit                                                              ║"))
+        print(colors.header("║ 1 │ Brand monitoring (CT discovery mode)                                    ║"))
+        print(colors.header("║ 2 │ Analyze my own domains (domain1,domain2 or .txt)                      ║"))
+        print(colors.header("║ 3 │ Manage brands (add / remove / list — persists to brands.yaml)          ║"))
+        print(colors.header("║ 4 │ Settings (language AZ/EN, report format)                               ║"))
+        print(colors.header("║ 5 │ Watch mode (live CT stream with alerts)                                ║"))
+        print(colors.header("║ 6 │ History & reports (browse past scans, diff)                           ║"))
+        print(colors.header("║ 7 │ Whitelist management (official domains)                               ║"))
+        print(colors.header("║ 8 │ Exit                                                                  ║"))
         print(colors.header("╚════════════════════════════════════════════════════════════════════════════╝"))
         choice = input("> ").strip()
         if choice == "1":
@@ -388,6 +395,7 @@ def main():
     parser.add_argument("--watch", action="store_true")
     parser.add_argument("--format", type=str)
     parser.add_argument("--threshold", type=int, default=40)
+    parser.add_argument("--no-anim", action="store_true")
     parser.add_argument("--demo-anim", action="store_true")
     args = parser.parse_args()
 
@@ -406,7 +414,7 @@ def main():
         print(colors.warn("Sandbox view not implemented in Phase 1 (passive only)."))
 
     if args.demo_anim:
-        from kararadar.core.radar_anim import RadarAnimation
+        from kararadar.core.radar_anim import RadarAnimation, with_radar, log_checked
         with RadarAnimation("Demo scan", enabled=True) as anim:
             anim.set_total(5)
             import time as _t
