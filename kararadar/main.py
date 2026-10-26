@@ -384,6 +384,7 @@ def main():
     parser.add_argument("--enable-sandbox-view", action="store_true")
     parser.add_argument("--monitor", action="store_true")
     parser.add_argument("--no-banner", action="store_true")
+    parser.add_argument("--no-anim", action="store_true")
     parser.add_argument("--brand", type=str)
     parser.add_argument("--watch", action="store_true")
     parser.add_argument("--format", type=str)

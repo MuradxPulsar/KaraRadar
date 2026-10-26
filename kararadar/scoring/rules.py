@@ -26,7 +26,7 @@ def _load_weights():
 
 _LOADED = _load_weights()
 
-BRAND_WEIGHTS = {
+_DEFAULTS = {
     "typosquat": 30,
     "homoglyph": 40,
     "added_word": 20,
@@ -35,7 +35,27 @@ BRAND_WEIGHTS = {
     "transposition": 25,
     "idn_punycode": 40,
     "fuzzy": 15,
+    "domain_age_30": 35,
+    "domain_age_90": 20,
+    "suspicious_word": 10,
+    "abused_tld": 25,
+    "missing_spf": 8,
+    "missing_dmarc": 8,
+    "hosting_flag": 15,
+    "proxy_flag": 15,
+    "foreign_hosting": 10,
+    "aggregation_bonus": 20,
 }
+
+WEIGHTS = dict(_DEFAULTS)
+WEIGHTS.update({k: v for k, v in _LOADED.items() if k in _DEFAULTS})
+
+def W(key, default=None):
+    return WEIGHTS.get(key, default if default is not None else _DEFAULTS.get(key, 0))
+
+BRAND_WEIGHTS = {k: WEIGHTS.get(k, v) for k, v in _DEFAULTS.items()
+                 if k in ("typosquat","homoglyph","added_word","tld_swap",
+                          "hyphen_merge","transposition","idn_punycode","fuzzy")}
 
 
 def _age_days(created):
@@ -63,17 +83,19 @@ def score_domain(domain, rdap=None, dns=None, ip_list=None, brand_matches=None):
     age = _age_days(created)
     if age is not None:
         if age < 30:
-            signals.append(("domain age < 30 days", 35, f"registered {age} days ago"))
-            total += 35
+            w = W("domain_age_30")
+            signals.append(("domain age < 30 days", w, f"registered {age} days ago"))
+            total += w
         elif age < 90:
-            signals.append(("domain age < 90 days", 20, f"registered {age} days ago"))
-            total += 20
+            w = W("domain_age_90")
+            signals.append(("domain age < 90 days", w, f"registered {age} days ago"))
+            total += w
 
     # brand similarity
     if brand_matches:
         for m in brand_matches:
             for typ, detail in m.get("types", []):
-                w = BRAND_WEIGHTS.get(typ, 10)
+                w = W(typ, 10)
                 signals.append((f"brand lookalike ({typ})", w,
                                 f"{m.get('brand')}: {detail}"))
                 total += w
@@ -82,46 +104,53 @@ def score_domain(domain, rdap=None, dns=None, ip_list=None, brand_matches=None):
     sw = [w for w in SUSPICIOUS_WORDS if w in domain.lower()]
     # avoid double counting 'az' alone? keep simple
     if sw:
-        w = min(10 * len(sw), 20)
+        w = min(W("suspicious_word", 10) * len(sw), 2 * W("suspicious_word", 10))
         signals.append(("suspicious words", w, ", ".join(sw)))
         total += w
 
     # abused TLD
     for t in ABUSED_TLDS:
         if domain.lower().endswith(t):
-            signals.append(("abused TLD", 25, t))
-            total += 25
+            w = W("abused_tld", 25)
+            signals.append(("abused TLD", w, t))
+            total += w
             break
     # email security (SPF/DMARC)
     dd = dns or {}
     has_dns = bool(dd.get("A") or dd.get("MX") or dd.get("NS") or dd.get("TXT"))
     if has_dns and not dd.get("SPF"):
-        signals.append(("missing SPF", 8, "no SPF TXT record"))
-        total += 8
+        w = W("missing_spf", 8)
+        signals.append(("missing SPF", w, "no SPF TXT record"))
+        total += w
     if has_dns and not dd.get("DMARC"):
-        signals.append(("missing DMARC", 8, "no DMARC policy"))
-        total += 8
+        w = W("missing_dmarc", 8)
+        signals.append(("missing DMARC", w, "no DMARC policy"))
+        total += w
 
     # ip/hosting anomalies
     for info in (ip_list or []):
         if isinstance(info, dict) and "error" not in info:
             if info.get("hosting"):
-                signals.append(("hosting flag", 15, info.get("isp")))
-                total += 15
+                w = W("hosting_flag", 15)
+                signals.append(("hosting flag", w, info.get("isp")))
+                total += w
             if info.get("proxy"):
-                signals.append(("proxy flag", 15, info.get("isp")))
-                total += 15
+                w = W("proxy_flag", 15)
+                signals.append(("proxy flag", w, info.get("isp")))
+                total += w
             country = info.get("country")
             if country and country.lower() not in ("azerbaijan",):
-                signals.append(("foreign hosting", 10, country))
-                total += 10
+                w = W("foreign_hosting", 10)
+                signals.append(("foreign hosting", w, country))
+                total += w
 
     # aggregation bonus
     registrar = (rdap or {}).get("registrar") if rdap else None
     if brand_match and age is not None and age < 90 and registrar:
-        signals.append(("aggregation bonus", 20,
+        w = W("aggregation_bonus", 20)
+        signals.append(("aggregation bonus", w,
                         "new domain + brand lookalike + registrar present"))
-        total += 20
+        total += w
 
     # verdict
     if brand_match:
@@ -134,6 +163,3 @@ def score_domain(domain, rdap=None, dns=None, ip_list=None, brand_matches=None):
     return {"score": total, "verdict": verdict, "signals": [
         {"signal": s, "weight": w, "detail": d} for (s, w, d) in signals
     ], "brand_match": brand_match}
-# apply yaml overrides if present
-if _LOADED:
-    BRAND_WEIGHTS.update({k: v for k, v in _LOADED.items() if k in BRAND_WEIGHTS or True})
