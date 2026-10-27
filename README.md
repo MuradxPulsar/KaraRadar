@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/python-3.12%2B-blue?logo=python)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Tests](https://img.shields.io/badge/tests-12%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-13%20passed-brightgreen)
 ![Status](https://img.shields.io/badge/status-active-success)
 
 **KaraRadar** is a passive OSINT anti-phishing CLI tool for detecting domains
@@ -246,7 +246,7 @@ Every report ends with:
 
 ```bash
 pytest
-# expected: 12 passed
+# expected: 13 passed
 ```
 
 Offline tests cover: similarity on `example.invalid`, whitelist safety, scoring on
