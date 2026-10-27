@@ -344,35 +344,108 @@ MIT.
 
 ## Function Reference
 
-### kararadar.core
-- cache.Cache(path, ttl): SQLite cache. Methods get, set, record_run, trend, purge, close.
-- colors: ok, danger, info, header, warn, success, error, scanning, card, print_card, gradient, VERDICT_COLOR.
-- spinner.Spinner(message): context-manager spinner.
-- report: to_json, to_txt, to_csv, to_md, to_html, save.
-
-### kararadar.detection
-- brandmatch.load_brands(path=None), is_whitelisted(domain), match(candidate, brands=None)
-- similarity: levenshtein, normalize_domain, registered_name, is_punycode, homoglyph_normalize, detect(candidate, brand), has_suspicious_word, abused_tld. Constants HOMOGLYPHS, SUSPICIOUS_WORDS, ABUSED_TLDS.
-
-### kararadar.scoring
-- rules.score_domain(domain, rdap, dns, ip_list, brand_matches) -> dict(score, verdict, signals, brand_match)
-- _age_days(created)
-
-### kararadar.enrichment
-- rdap.lookup(domain)
-- dnsmod.resolve(domain)
-- ipinfo.lookup(ip)
-
-### kararadar.sources
-- crtsh.search_keyword(keyword, limit=200), search_domain(domain, limit=100)
-- certspotter.get_issuances(domain, limit=50)
-
 ### kararadar.ai
 - ollama_sum.summarize(results)
 
-### kararadar.reports
-- templates (STRINGS, CERT_EMAIL_TEMPLATE, cert_email)
-- html_gen.generate(results, lang)
+### kararadar.core
+- cache:
+  - class `Cache(path=DEFAULT_DB, ttl=86400)`
+  - methods: `get(key)`, `set(key, value, ttl=None)`, `record_run(domain, verdict, score)`, `trend(limit=30)`, `purge()`, `close()`, context manager `__enter__`/`__exit__`.
+- colors:
+  - `_strip_ansi(s)`
+  - `ok(msg)`, `success(msg)`, `danger(msg)`, `error(msg)`, `info(msg)`, `header(msg)`, `warn(msg)`, `scanning(msg)`, `gradient(msg)`
+  - `card(text, color=Fore.CYAN)`, `print_card(body, color=None)`
+  - constant `VERDICT_COLOR`.
+- radar_anim:
+  - classes: `RadarState`, `RadarAnimation(message="Scanning...", enabled=True)`
+  - functions: `_tty()`, `_cols()`, `_hide_cursor()`, `_show_cursor()`, `_pos(domain, radius=9)`, `render_frame(state, width=32)`, `with_radar(text="Scanning...")`, `log_checked(msg)`, `_color_ok()`
+  - `RadarAnimation` methods: `__enter__`, `__exit__`, `stop()`, `set_stage(stage)`, `set_current(domain)`, `advance(error=False)`, `add_blip(domain, verdict)`, `set_total(n)`, plus internal runners `_run`, `_run_lines`, `_stop_frame`.
+- report:
+  - `to_json(results)`, `to_txt(results, lang="az")`, `to_csv(results)`, `to_md(results, lang="az")`, `to_html(results, lang="az")`, `save(results, fmt, path, lang="az")`.
+- spinner:
+  - class `Spinner(message)` (context manager).
+  - cache `record_run`/`trend` helpers as above.
 
-### CLI functions (kararadar.main)
-- main(), interactive_menu(lang), analyze_one(domain, lang, since), analyze_domains(...), monitor_brands(...), add_brand(spec), remove_brand(name), list_brands(), is_whitelisted(d).
+### kararadar.db
+- `_conn(path=None)`
+- `record_run(run_id=None, domains=None, lang="az")`
+- `mark_seen(domain)`
+- `history(limit=10)`
+- `diff_runs(a_id, b_id)`
+
+### kararadar.detection
+- brandmatch:
+  - `_simple_parse(path)`
+  - `load_brands(path=None)`
+  - `is_whitelisted(domain)`
+  - `match(candidate, brands=None)`
+- similarity:
+  - `levenshtein(a, b)`
+  - `normalize_domain(d)`
+  - `registered_name(domain)`
+  - `is_punycode(domain)`
+  - `homoglyph_normalize(s)`
+  - `az_normalize(s)`
+  - `detect(candidate, brand)`
+  - `has_suspicious_word(domain)`
+  - `abused_tld(domain)`
+  - `generate_variants(name)`
+  - constants: `HOMOGLYPHS`, `SUSPICIOUS_WORDS`, `ABUSED_TLDS`, `AZ_MAP`.
+
+### kararadar.enrichment
+- dnsmod.resolve(domain)
+- ipinfo.lookup(ip)
+- probe.probe(url, timeout=10), `_title(html)`
+- rdap.lookup(domain)
+
+### kararadar.i18n
+- `t(lang, key)`
+
+### kararadar.main
+- `_banner()`
+- class `_NullCtx`
+- `is_whitelisted(d)`
+- `analyze_one(domain, lang="az", since=None)`
+- `analyze_domains(domains, lang="az", since=None, show=True, animated=True)`
+- `monitor_brands(since=None, lang="az", limit=15, max_brands=8)`
+- `add_brand(spec)`
+- `remove_brand(name)`
+- `list_brands()`
+- `interactive_menu(lang="az", show_banner=True)`
+- `_post_report(res, lang)`
+- `main()`
+
+### kararadar.notify
+- `alert(domain, score, verdict, threshold=40)`
+
+### kararadar.reports
+- templates:
+  - `STRINGS`, `CERT_EMAIL_TEMPLATE`, `cert_email(domain, verdict, score, signals)`
+- html_gen:
+  - `_svg_graph(results)`
+  - `generate(results, lang="az")`
+
+### kararadar.scoring
+- rules:
+  - `_load_weights()`
+  - `W(key, default=None)`
+  - `_age_days(created)`
+  - `score_domain(domain, rdap=None, dns=None, ip_list=None, brand_matches=None)`
+  - constants: `SUSPICIOUS_WORDS`, `ABUSED_TLDS`, `BRAND_WEIGHTS`, `WEIGHTS`, `_DEFAULTS`, `_LOADED`.
+
+### kararadar.sources
+- certspotter.get_issuances(domain, limit=50)
+- crtsh:
+  - `_get(params)`
+  - `_collect_domains(data)`
+  - `search_keyword(keyword, limit=200, include_expired=False)`
+  - `search_keyword_status(keyword, limit=200, include_expired=False)`
+  - `search_domain(domain, limit=100, include_expired=False, q_format="domain")`
+  - `enumerate_subdomains(domain, limit=500)`
+- reputation:
+  - `virustotal(domain)`
+  - `urlhaus(domain)`
+
+### urls / notes
+- Functions prefixed with `_` are internal helpers but listed above for completeness.
+
