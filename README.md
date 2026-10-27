@@ -336,9 +336,3 @@ MIT.
 - Disable with `--json` or `--no-anim`.
 - Preview: `python main.py --demo-anim`.
 
-## 🤖 Disclosure
-
-**AI-assisted development.**
-
-"Early warning, not complete protection."
-
