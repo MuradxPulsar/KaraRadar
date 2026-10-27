@@ -1,8 +1,10 @@
 """DNS enrichment (passive)."""
 import dns.resolver
+from kararadar.core.radar_anim import log_checked, with_radar
 
 TIMEOUT = 8
 
+@with_radar("DNS")
 def resolve(domain):
     out = {"A": [], "MX": [], "NS": [], "TXT": [], "SPF": None, "DMARC": None}
     resolver = dns.resolver.Resolver()
@@ -27,4 +29,5 @@ def resolve(domain):
                 out["DMARC"] = s
     except Exception:
         pass
+    log_checked(f"✔ DNS {domain} → A:{len(out['A'])} MX:{len(out['MX'])}")
     return out

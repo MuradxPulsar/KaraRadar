@@ -1,8 +1,10 @@
 """RDAP enrichment (passive)."""
 import requests, time
+from kararadar.core.radar_anim import log_checked, with_radar
 
 TIMEOUT = 15
 
+@with_radar("RDAP")
 def lookup(domain):
     url = f"https://rdap.org/domain/{domain}"
     try:
@@ -38,4 +40,5 @@ def lookup(domain):
                 for item in vcard[1]:
                     if item and item[0] == "email":
                         info["abuse_email"] = item[3]
+    log_checked(f"✔ RDAP {domain} → {info.get('created')}")
     return info

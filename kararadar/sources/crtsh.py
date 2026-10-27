@@ -2,14 +2,17 @@
 import time
 import requests
 
+from kararadar.core.radar_anim import with_radar, log_checked
+
 CRTSH = "https://crt.sh/"
 TIMEOUT = 10
+
 
 def _get(params):
     for attempt in range(2):
         try:
             r = requests.get(CRTSH, params=params, timeout=TIMEOUT)
-            if r.status_code in (400,404):
+            if r.status_code in (400, 404):
                 return None
             if r.status_code >= 500:
                 raise RuntimeError(f"crt.sh HTTP {r.status_code}")
@@ -20,21 +23,8 @@ def _get(params):
                 return None
             time.sleep(0.5 * (2 ** attempt))
 
-def search_keyword(keyword, limit=200, include_expired=False):
-    """Search CT logs for a brand keyword. Returns set of domains."""
-    kw = "".join(str(keyword).split()).lower()
-    params = {"q": f"%{kw}%", "output": "json"}
-    if not include_expired:
-        params["exclude"] = "expired"
-    try:
-        data = _get(params)
-    except Exception as e:
-        print(f"[w] crt.sh search failed: {e}")
-        return []
-    if data is None:
-        return []
-    if data is None:
-        return []
+
+def _collect_domains(data):
     domains = set()
     for entry in data or []:
         for field in ("common_name", "name_value"):
@@ -45,7 +35,73 @@ def search_keyword(keyword, limit=200, include_expired=False):
                 line = line.strip().lower().lstrip("*.")
                 if line and "." in line:
                     domains.add(line)
+    return domains
+
+
+@with_radar("CT search")
+def search_keyword(keyword, limit=200, include_expired=False):
+    """Search CT logs for a brand keyword. Returns list of domains."""
+    kw = "".join(str(keyword).split()).lower()
+    params = {"q": f"%{kw}%", "output": "json"}
+    if not include_expired:
+        params["exclude"] = "expired"
+    try:
+        data = _get(params)
+    except Exception as e:
+        print(f"[w] crt.sh search failed: {e}")
+        return []
+    if data is None:
+        log_checked(f'✖ crt.sh "{kw}" → timeout/404 (skipped)')
+        return []
+    domains = _collect_domains(data)
+    n = len(domains)
+    if n == 0:
+        log_checked(f'✖ crt.sh "{kw}" → empty/timeout (skipped)')
+        try:
+            time.sleep(1.0)
+            retry = _get(params)
+            if retry:
+                domains |= _collect_domains(retry)
+                log_checked(f'↻ crt.sh "{kw}" retry → {len(domains)} certs')
+            else:
+                log_checked(f'✖ crt.sh "{kw}" → still empty')
+        except Exception:
+            log_checked(f'✖ crt.sh "{kw}" → error')
+    else:
+        log_checked(f'✔ crt.sh "{kw}" → {min(n, limit)} certs')
     return list(domains)[:limit]
+
+
+@with_radar("CT search")
+def search_keyword_status(keyword, limit=200, include_expired=False):
+    """Like search_keyword, but also returns a short status string."""
+    kw = "".join(str(keyword).split()).lower()
+    params = {"q": f"%{kw}%", "output": "json"}
+    if not include_expired:
+        params["exclude"] = "expired"
+    try:
+        data = _get(params)
+    except Exception as e:
+        print(f"[w] crt.sh search failed: {e}")
+        return [], "failed"
+    if data is None:
+        log_checked(f'✖ crt.sh "{kw}" → timeout/404 (skipped)')
+        return [], "failed"
+    domains = _collect_domains(data)
+    n = len(domains)
+    if n == 0:
+        log_checked(f'✖ crt.sh "{kw}" → 0 certs')
+        time.sleep(1.0)
+        data2 = _get(params)
+        if data2:
+            domains |= _collect_domains(data2)
+            log_checked(f'↻ crt.sh "{kw}" retry → {len(domains)} certs')
+        else:
+            log_checked(f'✖ crt.sh "{kw}" → still empty')
+        return list(domains)[:limit], "empty->retry"
+    log_checked(f'✔ crt.sh "{kw}" → {min(n, limit)} certs')
+    return list(domains)[:limit], "ok"
+
 
 def search_domain(domain, limit=100, include_expired=False, q_format="domain"):
     """Return certificates for an exact domain or its subdomains."""
@@ -57,8 +113,6 @@ def search_domain(domain, limit=100, include_expired=False, q_format="domain"):
         data = _get(params)
     except Exception as e:
         print(f"[w] crt.sh search failed: {e}")
-        return []
-    if data is None:
         return []
     if data is None:
         return []
@@ -78,7 +132,7 @@ def search_domain(domain, limit=100, include_expired=False, q_format="domain"):
 
 
 def enumerate_subdomains(domain, limit=500):
-    """Return unique subdomains for a domain discovered via CT logs (skill suggestion)."""
+    """Return unique subdomains for a domain discovered via CT logs."""
     params = {"q": f"%.{domain}", "output": "json", "exclude": "expired"}
     try:
         data = _get(params)
